@@ -1,0 +1,68 @@
+package com.hit.processes;
+
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.logging.Level;
+
+import com.hit.memoryunits.MemoryManagementUnit;
+import com.hit.memoryunits.Page;
+import com.hit.util.MMULogger;
+
+public class Process implements java.util.concurrent.Callable<Boolean> {
+
+	private int id;
+	private MemoryManagementUnit mmu;
+	private List<ProcessCycle> processCycles;
+
+	public Process(int id, MemoryManagementUnit mmu, ProcessCycles processCycles) {
+		setId(id);
+		this.mmu = mmu;
+		this.processCycles = processCycles.getProcessCycles();
+	}
+
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
+
+	@Override
+	public Boolean call() throws Exception {
+		Page<byte[]>[] pages;
+		
+		// iterating over the list of cycles
+		for (ProcessCycle cycle : processCycles) {
+			System.out.println("Process with id: " + id +" Going to get pages"+ cycle.getPages().toString());
+			
+			boolean write_read_pages[] = new boolean[cycle.getPages().size()];
+			
+			for(int i = 0 ; i < cycle.getPages().size(); i++) {
+				if(cycle.getData().get(i).length > 0) {
+					write_read_pages[i] = true;
+				} else {
+					write_read_pages[i] = false;
+				}
+			}
+
+			pages = mmu.getPages(cycle.getPages().toArray(new Long[cycle.getPages().size()]), write_read_pages);
+			
+			// set the content for each page
+			for (int i = 0; i < pages.length; i++) {
+				MMULogger.getInstance().write("GP: P" + this.id + " " + pages[i].getPageId() + " " + Arrays.toString(cycle.getData().get(i)), Level.INFO);
+				
+				if(write_read_pages[i] == true) {
+					pages[i].setContent(cycle.getData().get(i));
+				}
+			}
+
+			// going to sleep (simulate IO operation)
+			Thread.sleep(cycle.getSleepMs());
+		}
+		return true;
+	}
+	
+}

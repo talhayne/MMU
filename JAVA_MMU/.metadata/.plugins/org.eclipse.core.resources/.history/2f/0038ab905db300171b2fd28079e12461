@@ -1,0 +1,65 @@
+package com.hit.util;
+
+import java.io.IOException;
+import java.util.logging.FileHandler;
+import java.util.logging.Formatter;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+
+public class MMULogger {
+
+	public final static String DEFAULT_FILE_NAME = "logs/log.txt";
+	private static FileHandler handler;
+	private static final MMULogger instance = new MMULogger();
+
+	private MMULogger() {
+
+	}
+
+	public static MMULogger getInstance() {
+		return instance;
+	}
+
+	// create a new log file
+	public void startNewLogFile() {
+		try {
+			if (handler != null) {
+				handler.close();
+			}
+			handler = new FileHandler(DEFAULT_FILE_NAME);
+			handler.setFormatter(new OnlyMessageFormatter());
+		} catch (SecurityException | IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public synchronized void write(String command, Level level) {
+		handler.publish(new LogRecord(level, command + System.lineSeparator()));
+	}
+
+	public synchronized void writeError(String errorMsg, Exception e, Level level) {
+		String errorToLog = "ERROR" + System.lineSeparator() + errorMsg + System.lineSeparator() + e;
+		handler.publish(new LogRecord(level, errorToLog + System.lineSeparator()));
+	}
+
+	public class OnlyMessageFormatter extends Formatter {
+		public OnlyMessageFormatter() {
+			super();
+		}
+
+		@Override
+		public String format(final LogRecord record) {
+			return record.getMessage();
+		}
+	}
+	
+	public void closeLogFile() {
+		if(handler != null) {
+			handler.close();
+		}
+	}
+
+	public String getFileName() {
+		return DEFAULT_FILE_NAME;
+	}
+}

@@ -1,0 +1,31 @@
+package com.hit.memoryunits;
+
+import static org.junit.Assert.*;
+
+import java.io.IOException;
+import java.util.Arrays;
+
+import org.junit.Test;
+
+
+import com.hit.algorithm.*;
+
+public class MemoryManagementUnitTest {
+
+	public static MemoryManagementUnit mmu;
+	
+	// First test case
+	@Test
+	public void testForExistence() {
+		mmu = new MemoryManagementUnit(25, new LRUAlgoCacheImpl<Long,Long>(25));
+		try {
+			Page<byte[]>[] pages = mmu.getPages(new Long[]{new Long(1)}, new boolean[]{true});
+			for(Page<byte[]> page : pages) {
+				System.out.println(Arrays.toString(page.getContent()));
+				assertTrue(page.getContent() != null);
+			}			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+}

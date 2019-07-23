@@ -1,0 +1,174 @@
+package com.hit.model;
+
+
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Observable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.logging.Level;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonIOException;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.stream.JsonReader;
+import com.hit.algorithm.IAlgoCache;
+import com.hit.algorithm.LRUAlgoCacheImpl;
+import com.hit.algorithm.NFUAlgoCachelmpl;
+import com.hit.algorithm.RandomAlgoCacheImpl;
+import com.hit.memoryunits.MemoryManagementUnit;
+import com.hit.processes.Process;
+import com.hit.processes.ProcessCycles;
+import com.hit.processes.RunConfiguration;
+import com.hit.util.MMULogger;
+
+
+public class MMUModel extends Observable implements Model {
+
+/*	private int numProcesses;
+	private int ramCapacity;*/
+	private String[] configurations;
+	public static final String CONFIGURATION_FILE = "src/main/resources/com/hit/config/Configuration.json";
+	private MMULogger logger;
+	
+	public MMUModel() 
+	{ 
+		logger = MMULogger.getInstance();
+	} 
+	
+	public void setConfiguration(List<String> configurations)
+	{
+		this.configurations = configurations.toArray(new String[configurations.size()]);
+	}
+
+		
+	public IAlgoCache<Long, Long> getAlgo(String algo, int capacity) {
+		
+		switch (algo.toUpperCase()) {
+		case "LRU":
+			return new LRUAlgoCacheImpl<>(capacity);
+		case "NFU":
+			return new NFUAlgoCachelmpl<>(capacity);
+		case "RANDOM":
+			return new RandomAlgoCacheImpl<>(capacity);
+		}
+
+		return null;
+	}
+	
+	@Override
+	public void start() {
+		IAlgoCache<Long , Long> algo = null;
+		int capacity=0;
+		
+		//Initialize capacity and algo
+		capacity = Integer.parseInt(configurations[1]);
+		algo = getAlgo(configurations[0], capacity);
+		
+		// build mmu and initial ram(content)
+		
+		MemoryManagementUnit mmu= new MemoryManagementUnit(capacity,algo);
+		RunConfiguration runConfig= readConfigurationFile();
+		List<ProcessCycles> ProcessCycles=runConfig.getProcessCycles();
+		List<Process> processes= createProcesses(ProcessCycles,mmu);
+		runProcesses(processes);
+		
+		// The MMU has finished its work and can be shutdown safely
+		// --- Bonus ---
+		mmu.shutdown();
+		
+		List<String> logList = readLogFile();
+		
+		// Notify observers
+		setChanged();
+		notifyObservers(logList);
+	
+	}
+
+	private void runProcesses(List<Process> processes) {
+		
+		logger.write("PN " + processes.size(), Level.INFO);
+		ExecutorService executor = Executors.newCachedThreadPool();
+		@SuppressWarnings("unchecked")
+		Future<Boolean> futures[]= new Future[processes.size()];
+		for(int i=0; i< processes.size(); i++)
+		{
+			futures[i]= executor.submit(processes.get(i));
+		}
+		
+		executor.shutdown(); 
+		
+		for(Future<Boolean> future : futures) {
+			try {
+				System.out.println(future.get());
+				
+			} catch (InterruptedException | ExecutionException e) {
+				logger.writeError("Thread is waiting, sleeping, or otherwise occupied "
+						+ "or when attempting to retrieve the result of a task that aborted", e , Level.SEVERE);
+				e.printStackTrace();
+				
+			}
+		}
+	}
+
+	private List<Process> createProcesses(List<ProcessCycles> processCycles, MemoryManagementUnit mmu) {
+		List<Process> processList = new ArrayList<>();
+		
+		for(int i = 0 ; i < processCycles.size(); i++) {
+			processList.add(new Process(i, mmu, processCycles.get(i)));
+		}
+		
+		return processList;
+	}
+
+	private RunConfiguration readConfigurationFile() {
+		RunConfiguration runConfiguration = null;
+		
+		try {
+			runConfiguration = new Gson().fromJson(new JsonReader(new FileReader(CONFIGURATION_FILE)), RunConfiguration.class);
+		} catch (JsonIOException | JsonSyntaxException | FileNotFoundException e) {
+			logger.writeError("Configuration file could not be loaded", e , Level.SEVERE);
+			e.printStackTrace();
+		}
+		
+		return runConfiguration;
+	}
+	
+	private List<String> readLogFile() {
+		List<String> logList = new ArrayList<String>();
+		FileReader fileReader = null;
+		BufferedReader bufferedReader = null;
+
+		try {
+			fileReader = new FileReader(MMULogger.getInstance().getFileName());
+			bufferedReader = new BufferedReader(fileReader);
+			String line;
+			while ((line = bufferedReader.readLine()) != null) {
+				line = line.trim();
+				if (!line.isEmpty()) {
+					logList.add(line);
+				}
+			}
+		} catch (Exception e) {
+			MMULogger.getInstance().write(e.toString(), Level.SEVERE);
+		} finally {
+			if (bufferedReader != null)
+				try {
+					bufferedReader.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+		}
+		
+		return logList;
+	}
+	
+	
+}
+

@@ -1,0 +1,44 @@
+package com.hit.memoryunits;
+
+@SuppressWarnings("serial")
+public class Page<T> implements java.io.Serializable {
+
+	private Long pageID;
+	private T pageContent;
+	
+	public Page(Long id, T content) {
+		pageID = id;
+		pageContent = content;
+	}
+	
+	public T getContent() {
+		return pageContent;
+	}
+	
+	public Long getPageId() {
+		return pageID;
+	}
+	
+	public void setContent(T content) {
+		pageContent = content;
+	}
+	
+	public void setPageId(Long pageId) {
+		pageID = pageId;
+	}
+	
+	@Override
+	public String toString() {
+		return pageID.toString();
+	}
+	
+	@Override
+	public int hashCode() {
+		return pageID.hashCode();
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		return this.hashCode() == obj.hashCode();
+	}
+}

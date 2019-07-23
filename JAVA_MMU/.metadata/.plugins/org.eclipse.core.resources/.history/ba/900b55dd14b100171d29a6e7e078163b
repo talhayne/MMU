@@ -1,0 +1,67 @@
+package com.hit.memoryunits;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+
+//import static org.junit.Assert.*;
+
+import org.junit.Test;
+
+import com.hit.algorithm.*;
+
+public class MemoryManagementUnitTest {
+
+	@Test
+	public void test() throws FileNotFoundException, IOException {
+
+		MemoryManagementUnit mmu = new MemoryManagementUnit(5, new LRUAlgoCacheImpl<Long, Long>(3));
+		
+		Long[] pageIds = { (long) 1, (long) 2, (long) 3, (long) 4, (long) 5 };
+		boolean[] write= {true,false,false,true,true,false,true};
+
+		@SuppressWarnings("unchecked")
+		Page<byte[]>[] pages = new Page[5];
+
+		try {
+			pages = mmu.getPages(pageIds,write);
+		}
+
+		catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		for (int i = 0; i < pages.length; i++) {
+			System.out.print("id: " + pages[i].getPageId());
+			System.out.print(" content: ");
+
+			for (int j = 0; j < pages[i].getContent().length; j++) {
+				System.out.println(pages[i].getContent()[j] + " ");
+			}
+		}
+
+		Long[] pageIds2 = { (long) 4, (long) 5, (long) 6, (long) 7, (long) 8 };
+
+		try {
+			pages = mmu.getPages(pageIds2);
+
+		}
+
+		catch (IOException e) {
+
+			e.printStackTrace();
+		}
+
+		System.out.println("---- page replacement----");
+
+		for (int i = 0; i < pages.length; i++) {
+			System.out.print("id: " + pages[i].getPageId());
+			System.out.print(" content: ");
+
+			for (int j = 0; j < pages[i].getContent().length; j++) {
+				System.out.println(pages[i].getContent()[j] + " ");
+			}
+		}
+
+	}
+
+}
